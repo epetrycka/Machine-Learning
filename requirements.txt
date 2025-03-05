@@ -5,3 +5,4 @@ Pandas==2.2.2
 Matplotlib==3.9.0
 Seaborn==0.13.2
 jupyterlab
+plotly

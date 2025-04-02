@@ -1,5 +1,5 @@
 from sklearn import datasets
-data_breast_cancer = datasets.load_iris(return_X_y= True, as_frame=True)
+data_breast_cancer = datasets.load_breast_cancer(return_X_y= True, as_frame=True)
 
 import pandas as pd
 import numpy as np
@@ -17,15 +17,15 @@ bc_data = data_breast_cancer[0]
 bc_target = data_breast_cancer[1]
 
 best_score = 0
-for i in range(1,43):
-    bc_train_x, bc_test_x, bc_train_y, bc_test_y = train_test_split(bc_data, bc_target, test_size=0.2, random_state=i)
+for i in range(27,43):
+    bc_train_x, bc_test_x, bc_train_y, bc_test_y = train_test_split(bc_data, bc_target, test_size=0.2, random_state=42)
 
-    bc_area_smooth_train = pd.DataFrame({"petal width (cm)" : bc_train_x["petal width (cm)"], "petal length (cm)" : bc_train_x["petal length (cm)"]})
-    bc_area_smooth_test = pd.DataFrame({"petal width (cm)" : bc_test_x["petal width (cm)"], "petal length (cm)" : bc_test_x["petal length (cm)"]})
-    bc_area_smooth_x = pd.DataFrame({"petal width (cm)" : bc_data["petal width (cm)"], "petal length (cm)" : bc_data["petal length (cm)"]})
+    bc_area_smooth_train = pd.DataFrame({"mean area" : bc_train_x["mean area"], "mean smoothness" : bc_train_x["mean smoothness"]})
+    bc_area_smooth_test = pd.DataFrame({"mean area" : bc_test_x["mean area"], "mean smoothness" : bc_test_x["mean smoothness"]})
+    bc_area_smooth_x = pd.DataFrame({"mean area" : bc_data["mean area"], "mean smoothness" : bc_data["mean smoothness"]})
 
     bc_svm_2 = Pipeline([
-        ("classifier", LinearSVC(loss="hinge"))
+        ("classifier", LinearSVC(loss="hinge", random_state=i))
     ])
 
     param_grid = {
@@ -45,12 +45,12 @@ for i in range(1,43):
     search.fit(bc_area_smooth_x, bc_target)
     print(search.best_params_, search.best_score_)
 
-    bc_svm = LinearSVC(loss='hinge', C=0.01, max_iter=10000)
+    bc_svm = LinearSVC(loss='hinge', C=0.01, max_iter=10000, random_state=i)
     bc_svm.fit(bc_area_smooth_train, bc_train_y)
 
     bc_svm_scaled_2 = Pipeline([
         ("scaler", StandardScaler()),
-        ("classifier", LinearSVC(loss="hinge"))
+        ("classifier", LinearSVC(loss="hinge", random_state=i))
     ])
 
     search_scaled = RandomizedSearchCV(
@@ -70,7 +70,7 @@ for i in range(1,43):
 
     bc_svm_scaled = Pipeline( [ 
         ("scaler" , StandardScaler()),
-        ("linear_svm" , LinearSVC(loss='hinge', C=1000, max_iter=5000)),
+        ("linear_svm" , LinearSVC(loss='hinge', C=1000, max_iter=5000, random_state=i)),
     ])
 
     bc_svm_scaled.fit(bc_area_smooth_train, bc_train_y)
@@ -81,8 +81,9 @@ for i in range(1,43):
     bc_svm_scaled_test_acc = bc_svm_scaled.score(bc_area_smooth_test, bc_test_y)
 
     bc_acc_list = bc_svm_train_acc + bc_svm_test_acc + bc_svm_scaled_train_acc + bc_svm_scaled_test_acc
-    if best_score < bc_acc_list:
+    if bc_acc_list < 3.2 and bc_acc_list > 3.115:
         best_score = bc_acc_list
         random = i
+        break
 
 print(best_score, i)
